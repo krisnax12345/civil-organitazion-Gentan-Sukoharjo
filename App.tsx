@@ -12,13 +12,13 @@ import CloudBackup from './components/CloudBackup';
 import Login from './components/Login';
 import { AppView, Warga, Transaksi } from './types';
 
-// Fix: Use process.env instead of import.meta.env to satisfy the environment requirements and fix TS errors.
+// Menggunakan process.env sebagai standar akses variabel lingkungan di platform ini
 // @ts-ignore
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || '';
 // @ts-ignore
 const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || '';
 
-// Hanya buat client jika URL valid untuk mencegah crash di level inisialisasi
+// Inisialisasi client Supabase secara aman
 const supabase = (SUPABASE_URL && SUPABASE_URL.startsWith('http')) 
   ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY) 
   : null;
@@ -48,7 +48,9 @@ const App: React.FC = () => {
     setDbError(null);
 
     if (!supabase) {
-      console.warn("Konfigurasi Cloud tidak ditemukan. Menggunakan penyimpanan lokal.");
+      console.warn("Konfigurasi Supabase tidak ditemukan. Menggunakan penyimpanan lokal.");
+      setDbError("Konfigurasi Cloud belum lengkap. Menggunakan database lokal.");
+      
       const savedWarga = localStorage.getItem('rt_warga');
       const savedTrx = localStorage.getItem('rt_transaksi');
       const savedIuran = localStorage.getItem('rt_iuran');
@@ -62,6 +64,7 @@ const App: React.FC = () => {
     }
     
     try {
+      // 1. Fetch Warga
       const { data: wargaData, error: wError } = await supabase.from('warga').select('*');
       if (wError) throw wError;
       if (wargaData) {
@@ -75,6 +78,7 @@ const App: React.FC = () => {
         })));
       }
 
+      // 2. Fetch Transaksi
       const { data: trxData, error: tError } = await supabase.from('transaksi').select('*').order('timestamp_ms', { ascending: false });
       if (tError) throw tError;
       if (trxData) {
@@ -85,21 +89,23 @@ const App: React.FC = () => {
           subKeterangan: t.sub_keterangan,
           kategori: t.kategori,
           jumlah: t.jumlah,
-          timestamp: t.timestamp_ms
+          timestamp: Number(t.timestamp_ms)
         })));
       }
 
+      // 3. Fetch Iuran Harian
       const { data: iuranRows, error: iError } = await supabase.from('iuran_harian').select('*');
       if (iError) throw iError;
       if (iuranRows) {
         const nested: Record<string, Record<string, number>> = {};
         iuranRows.forEach(row => {
           if (!nested[row.warga_id]) nested[row.warga_id] = {};
-          nested[row.warga_id][row.tanggal] = row.jumlah;
+          nested[row.warga_id][row.tanggal] = Number(row.jumlah);
         });
         setIuranHarian(nested);
       }
 
+      // 4. Fetch Pengaturan
       const { data: settingData } = await supabase.from('pengaturan').select('*').eq('kunci', 'nominal_wajib').single();
       if (settingData) {
         setNominalWajib(parseInt(settingData.nilai));
@@ -107,7 +113,7 @@ const App: React.FC = () => {
 
     } catch (error: any) {
       console.error('Koneksi Supabase Gagal:', error.message);
-      setDbError(`Sinkronisasi gagal: ${error.message}. Aplikasi tetap berjalan dalam mode lokal.`);
+      setDbError(`Sinkronisasi Cloud Gagal: ${error.message}. Data lokal digunakan.`);
     } finally {
       setIsLoading(false);
     }
@@ -160,7 +166,7 @@ const App: React.FC = () => {
         whatsapp: warga.whatsapp,
         blok: warga.blok
       }]);
-      if (error) console.error("Cloud Error:", error.message);
+      if (error) console.error("Cloud Insert Error:", error.message);
     }
   };
 
@@ -231,12 +237,74 @@ const App: React.FC = () => {
     });
   };
 
+  const recordBulk = async (wargaId: string, startMonth: number, startYear: number, totalMonths: number, totalAmount: number) => {
+    const warga = listWarga.find(w => w.id === wargaId);
+    if (!warga) return;
+
+    const daysPayload: {date: string, amount: number}[] = [];
+    let currentM = startMonth;
+    let currentY = startYear;
+
+    for (let i = 0; i < totalMonths; i++) {
+      const dInM = new Date(currentY, currentM, 0).getDate();
+      const amountPerDay = Math.floor((totalAmount / totalMonths) / dInM);
+      
+      for (let d = 1; d <= dInM; d++) {
+        daysPayload.push({
+          date: `${currentY}-${String(currentM).padStart(2, '0')}-${String(d).padStart(2, '0')}`,
+          amount: amountPerDay
+        });
+      }
+      
+      currentM++;
+      if (currentM > 12) { currentM = 1; currentY++; }
+    }
+
+    setIuranHarian(prev => {
+      const newWargaIuran = { ...(prev[wargaId] || {}) };
+      daysPayload.forEach(item => {
+        newWargaIuran[item.date] = (newWargaIuran[item.date] || 0) + item.amount;
+      });
+      return { ...prev, [wargaId]: newWargaIuran };
+    });
+
+    if (supabase) {
+      const payload = daysPayload.map(p => ({
+        warga_id: wargaId,
+        tanggal: p.date,
+        jumlah: p.amount
+      }));
+      await supabase.from('iuran_harian').upsert(payload, { onConflict: 'warga_id,tanggal' });
+    }
+
+    addTransaksi({
+      tanggal: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }),
+      keterangan: `Paket Iuran: ${warga.nama}`,
+      subKeterangan: `${totalMonths} Bulan`,
+      kategori: 'masuk',
+      jumlah: totalAmount
+    });
+  };
+
+  const recordCustom = async (wargaId: string, amount: number, keterangan?: string) => {
+    const warga = listWarga.find(w => w.id === wargaId);
+    if (!warga) return;
+
+    addTransaksi({
+      tanggal: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }),
+      keterangan: `Iuran Bebas: ${warga.nama}`,
+      subKeterangan: keterangan || 'Pembayaran iuran',
+      kategori: 'masuk',
+      jumlah: amount
+    });
+  };
+
   const renderContent = () => {
     if (isLoading) {
       return (
         <div className="flex flex-col items-center justify-center h-full gap-6">
           <div className="size-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
-          <p className="text-xs font-black uppercase tracking-widest text-slate-400">Menyiapkan Aplikasi...</p>
+          <p className="text-xs font-black uppercase tracking-widest text-slate-400">Menghubungkan Database...</p>
         </div>
       );
     }
@@ -247,7 +315,7 @@ const App: React.FC = () => {
           <div className="m-5 p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900 rounded-2xl flex items-center gap-4 animate-in fade-in slide-in-from-top">
             <span className="material-symbols-outlined text-amber-500">cloud_off</span>
             <div className="flex-1">
-              <p className="text-[10px] font-black uppercase text-amber-500">Offline / Local Mode</p>
+              <p className="text-[10px] font-black uppercase text-amber-500">Offline Mode</p>
               <p className="text-xs font-medium text-slate-600 dark:text-slate-300">{dbError}</p>
             </div>
           </div>
@@ -258,7 +326,7 @@ const App: React.FC = () => {
             case AppView.DASHBOARD: return <Dashboard listWarga={listWarga} listTransaksi={listTransaksi} iuranData={iuranHarian} nominalWajib={nominalWajib} currentUser={currentUser} />;
             case AppView.MASTER_DATA: return <MasterData listWarga={listWarga} onDelete={deleteWarga} />;
             case AppView.MANAJEMEN_WARGA: return <ManajemenWarga listWarga={listWarga} onAdd={addWarga} onDelete={deleteWarga} />;
-            case AppView.IURAN_HARIAN: return <IuranHarian listWarga={listWarga} listTransaksi={listTransaksi} iuranData={iuranHarian} onRecordMulti={recordIuranMulti} nominalWajib={nominalWajib} setNominalWajib={updateNominalGlobal} />;
+            case AppView.IURAN_HARIAN: return <IuranHarian listWarga={listWarga} listTransaksi={listTransaksi} iuranData={iuranHarian} onRecordMulti={recordIuranMulti} onRecordBulk={recordBulk} onRecordCustom={recordCustom} nominalWajib={nominalWajib} setNominalWajib={updateNominalGlobal} />;
             case AppView.PENGELUARAN_KAS: return <PengeluaranKas listTransaksi={listTransaksi} onAddPengeluaran={addTransaksi} />;
             case AppView.LAPORAN_KEUANGAN: return <LaporanKeuangan listTransaksi={listTransaksi} onAddTransaksi={addTransaksi} />;
             case AppView.CLOUD_BACKUP: return <CloudBackup listWarga={listWarga} listTransaksi={listTransaksi} iuranData={iuranHarian} onImport={fetchAllData} />;
@@ -277,6 +345,14 @@ const App: React.FC = () => {
     <div className="flex flex-col lg:flex-row h-screen overflow-hidden bg-background-light dark:bg-background-dark text-slate-600 dark:text-slate-100">
       <Sidebar activeView={activeView} setActiveView={setActiveView} isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} onLogout={handleLogout} currentUser={currentUser} />
       <main className="flex-1 overflow-y-auto custom-scrollbar pb-24 lg:pb-0">
+        <div className="fixed top-5 right-5 z-50 pointer-events-none no-print">
+            {!dbError && supabase ? (
+               <div className="bg-emerald-500 text-white px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg animate-in fade-in zoom-in">
+                  <span className="size-2 bg-white rounded-full animate-pulse"></span>
+                  Cloud Active
+               </div>
+            ) : null}
+        </div>
         {renderContent()}
       </main>
     </div>
