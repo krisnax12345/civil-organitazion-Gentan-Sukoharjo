@@ -10,7 +10,7 @@ import LaporanKeuangan from './components/LaporanKeuangan';
 import PengeluaranKas from './components/PengeluaranKas';
 import Pengaturan from './components/Pengaturan';
 import Login from './components/Login';
-import { AppView, Warga, Transaksi } from './types';
+import { AppView, Warga, Transaksi, User, UserRole } from './types';
 
 // Fungsi pembantu untuk mengambil variabel lingkungan secara aman
 const getEnv = (name: string): string => {
@@ -52,6 +52,7 @@ const App: React.FC = () => {
   const [instansiAddress, setInstansiAddress] = useState(() => localStorage.getItem('rt_instansi_address') || 'Lingkungan Aman Damai');
   const [instansiLogo, setInstansiLogo] = useState(() => localStorage.getItem('rt_instansi_logo') || '');
   const [listWarga, setListWarga] = useState<Warga[]>([]);
+  const [listUsers, setListUsers] = useState<User[]>([]);
   const [listTransaksi, setListTransaksi] = useState<Transaksi[]>([]);
   const [iuranHarian, setIuranHarian] = useState<Record<string, Record<string, number>>>({});
 
@@ -62,10 +63,12 @@ const App: React.FC = () => {
     const savedWarga = localStorage.getItem('rt_warga');
     const savedTrx = localStorage.getItem('rt_transaksi');
     const savedIuran = localStorage.getItem('rt_iuran');
+    const savedUsers = localStorage.getItem('rt_users');
     
     if (savedWarga) setListWarga(JSON.parse(savedWarga));
     if (savedTrx) setListTransaksi(JSON.parse(savedTrx));
     if (savedIuran) setIuranHarian(JSON.parse(savedIuran));
+    if (savedUsers) setListUsers(JSON.parse(savedUsers));
 
     if (!supabase) {
       setDbError(null); // Bukan error, hanya belum setup
@@ -78,6 +81,20 @@ const App: React.FC = () => {
       // Fetch Warga
       const { data: wargaData, error: wError } = await supabase.from('warga').select('*');
       if (wError) throw wError;
+      
+      // Fetch Users
+      const { data: usersData } = await supabase.from('users').select('*');
+      if (usersData) {
+        setListUsers(usersData.map(u => ({
+          id: u.id,
+          nama: u.nama,
+          jabatan: u.jabatan,
+          userId: u.user_id,
+          pass: u.pass,
+          role: u.role as UserRole
+        })));
+      }
+
       if (wargaData) {
         setListWarga(wargaData.map(w => ({
           id: w.id,
@@ -146,6 +163,7 @@ const App: React.FC = () => {
     localStorage.setItem('rt_user_id', currentUser);
     localStorage.setItem('rt_theme', isDarkMode ? 'dark' : 'light');
     localStorage.setItem('rt_warga', JSON.stringify(listWarga));
+    localStorage.setItem('rt_users', JSON.stringify(listUsers));
     localStorage.setItem('rt_transaksi', JSON.stringify(listTransaksi));
     localStorage.setItem('rt_iuran', JSON.stringify(iuranHarian));
     localStorage.setItem('rt_supabase_url', cloudConfig.url);
@@ -195,6 +213,32 @@ const App: React.FC = () => {
     if(!confirm('Hapus data warga ini?')) return;
     setListWarga(prev => prev.filter(w => w.id !== id));
     if (supabase) await supabase.from('warga').delete().eq('id', id);
+  };
+
+  const addUser = async (user: Omit<User, 'id'>) => {
+    const newId = crypto.randomUUID();
+    const newUser: User = { ...user, id: newId };
+    setListUsers(prev => [...prev, newUser]);
+    if (supabase) await supabase.from('users').insert([{ id: newId, nama: user.nama, jabatan: user.jabatan, user_id: user.userId, pass: user.pass, role: user.role }]);
+  };
+
+  const updateUser = async (id: string, updated: Partial<User>) => {
+    setListUsers(prev => prev.map(u => u.id === id ? { ...u, ...updated } : u));
+    if (supabase) {
+      const payload: any = {};
+      if (updated.nama) payload.nama = updated.nama;
+      if (updated.jabatan) payload.jabatan = updated.jabatan;
+      if (updated.userId) payload.user_id = updated.userId;
+      if (updated.pass) payload.pass = updated.pass;
+      if (updated.role) payload.role = updated.role;
+      await supabase.from('users').update(payload).eq('id', id);
+    }
+  };
+
+  const deleteUser = async (id: string) => {
+    if(!confirm('Hapus user ini?')) return;
+    setListUsers(prev => prev.filter(u => u.id !== id));
+    if (supabase) await supabase.from('users').delete().eq('id', id);
   };
 
   const addTransaksi = async (t: Omit<Transaksi, 'id' | 'timestamp'>) => {
@@ -402,6 +446,10 @@ const App: React.FC = () => {
                 onUpdateCloudConfig={updateCloudSettings}
                 currentCloudConfig={cloudConfig}
                 onResetAllData={resetAllData}
+                listUsers={listUsers}
+                onAddUser={addUser}
+                onUpdateUser={updateUser}
+                onDeleteUser={deleteUser}
               />
             );
             default: return <Dashboard listWarga={listWarga} listTransaksi={listTransaksi} iuranData={iuranHarian} nominalWajib={nominalWajib} currentUser={currentUser} instansiName={instansiName} instansiLogo={instansiLogo} />;
@@ -411,7 +459,7 @@ const App: React.FC = () => {
     );
   };
 
-  if (!isAuthenticated) return <Login onLoginSuccess={(uid) => { setCurrentUser(uid); setIsAuthenticated(true); }} />;
+  if (!isAuthenticated) return <Login onLoginSuccess={(uid) => { setCurrentUser(uid); setIsAuthenticated(true); }} listUsers={listUsers} />;
 
   return (
     <div className="flex flex-col lg:flex-row h-screen overflow-hidden bg-background-light dark:bg-background-dark text-slate-600 dark:text-slate-100">

@@ -1,11 +1,13 @@
 
 import React, { useState } from 'react';
+import { User } from '../types';
 
 interface LoginProps {
   onLoginSuccess: (userId: string) => void;
+  listUsers: User[];
 }
 
-const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
+const Login: React.FC<LoginProps> = ({ onLoginSuccess, listUsers }) => {
   const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -18,8 +20,10 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
     // Simulasi delay login untuk UX
     setTimeout(() => {
-      // Mengubah kredensial sesuai permintaan: sinoman01 / sinoman
-      if (userId === 'sinoman01' && password === 'sinoman') {
+      // Cek default admin atau user dari list
+      const user = listUsers.find(u => u.userId === userId && u.pass === password);
+      
+      if ((userId === 'sinoman01' && password === 'sinoman') || user) {
         onLoginSuccess(userId);
       } else {
         setError('User ID atau Password salah. Silakan coba lagi.');

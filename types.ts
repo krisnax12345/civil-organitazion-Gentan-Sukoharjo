@@ -9,6 +9,21 @@ export enum AppView {
   PENGATURAN = 'pengaturan'
 }
 
+export enum UserRole {
+  ADMIN = 'admin',
+  BENDAHARA = 'bendahara',
+  PENGURUS = 'pengurus'
+}
+
+export interface User {
+  id: string;
+  nama: string;
+  jabatan: string;
+  userId: string;
+  pass: string;
+  role: UserRole;
+}
+
 export interface Warga {
   id: string;
   nama: string;

@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Warga, Transaksi } from '../types';
+import { Warga, Transaksi, User, UserRole } from '../types';
 
 interface PengaturanProps {
   instansiName: string;
@@ -15,6 +15,11 @@ interface PengaturanProps {
   onUpdateCloudConfig: (url: string, key: string) => void;
   currentCloudConfig: { url: string; key: string };
   onResetAllData: () => void;
+  // User Management Props
+  listUsers: User[];
+  onAddUser: (user: Omit<User, 'id'>) => void;
+  onUpdateUser: (id: string, updated: Partial<User>) => void;
+  onDeleteUser: (id: string) => void;
 }
 
 const Pengaturan: React.FC<PengaturanProps> = ({ 
@@ -28,12 +33,27 @@ const Pengaturan: React.FC<PengaturanProps> = ({
   onImport,
   onUpdateCloudConfig,
   currentCloudConfig,
-  onResetAllData
+  onResetAllData,
+  listUsers,
+  onAddUser,
+  onUpdateUser,
+  onDeleteUser
 }) => {
   const [tempName, setTempName] = useState(instansiName);
   const [tempAddress, setTempAddress] = useState(instansiAddress);
   const [tempLogo, setTempLogo] = useState(instansiLogo);
   const [showSuccess, setShowSuccess] = useState(false);
+
+  // User Management State
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [userForm, setUserForm] = useState<Omit<User, 'id'>>({
+    nama: '',
+    jabatan: '',
+    userId: '',
+    pass: '',
+    role: UserRole.PENGURUS
+  });
 
   // Cloud State
   const [showCloudForm, setShowCloudForm] = useState(false);
@@ -68,6 +88,31 @@ const Pengaturan: React.FC<PengaturanProps> = ({
     setShowCloudForm(false);
     setShowSuccess(true);
     setTimeout(() => setShowSuccess(false), 3000);
+  };
+
+  const handleUserSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingUser) {
+      onUpdateUser(editingUser.id, userForm);
+    } else {
+      onAddUser(userForm);
+    }
+    setShowUserModal(false);
+    setEditingUser(null);
+    setUserForm({ nama: '', jabatan: '', userId: '', pass: '', role: UserRole.PENGURUS });
+    setShowSuccess(true);
+    setTimeout(() => setShowSuccess(false), 3000);
+  };
+
+  const openUserModal = (user?: User) => {
+    if (user) {
+      setEditingUser(user);
+      setUserForm({ nama: user.nama, jabatan: user.jabatan, userId: user.userId, pass: user.pass, role: user.role });
+    } else {
+      setEditingUser(null);
+      setUserForm({ nama: '', jabatan: '', userId: '', pass: '', role: UserRole.PENGURUS });
+    }
+    setShowUserModal(true);
   };
 
   const exportData = () => {
@@ -109,9 +154,57 @@ const Pengaturan: React.FC<PengaturanProps> = ({
         </div>
       )}
 
+      {showUserModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white dark:bg-card-dark rounded-[40px] w-full max-w-lg border border-slate-100 dark:border-slate-800 shadow-2xl overflow-hidden">
+            <div className="p-8 border-b border-slate-50 dark:border-slate-800 flex justify-between items-center bg-slate-50/30 dark:bg-transparent">
+              <h3 className="text-xl font-black dark:text-white tracking-tight uppercase">{editingUser ? 'Edit Pengguna' : 'Tambah Pengguna Baru'}</h3>
+              <button onClick={() => setShowUserModal(false)} className="size-10 flex items-center justify-center rounded-2xl text-slate-300 hover:bg-rose-50 hover:text-rose-500 transition-all">
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <form onSubmit={handleUserSubmit} className="p-8 space-y-5">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Nama Lengkap</label>
+                  <input required value={userForm.nama} onChange={e => setUserForm({...userForm, nama: e.target.value})} className="w-full rounded-2xl bg-slate-50/50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-3 text-sm dark:text-white outline-none focus:ring-2 focus:ring-primary transition-all" placeholder="Mis: Ahmad" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Jabatan</label>
+                  <input required value={userForm.jabatan} onChange={e => setUserForm({...userForm, jabatan: e.target.value})} className="w-full rounded-2xl bg-slate-50/50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-3 text-sm dark:text-white outline-none focus:ring-2 focus:ring-primary transition-all" placeholder="Mis: Ketua RT" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-slate-400 ml-1">User ID</label>
+                  <input required value={userForm.userId} onChange={e => setUserForm({...userForm, userId: e.target.value})} className="w-full rounded-2xl bg-slate-50/50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-3 text-sm dark:text-white outline-none focus:ring-2 focus:ring-primary transition-all" placeholder="Mis: admin01" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Password</label>
+                  <input required type="password" value={userForm.pass} onChange={e => setUserForm({...userForm, pass: e.target.value})} className="w-full rounded-2xl bg-slate-50/50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-3 text-sm dark:text-white outline-none focus:ring-2 focus:ring-primary transition-all" placeholder="••••••••" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Role / Hak Akses</label>
+                <select 
+                  value={userForm.role}
+                  onChange={e => setUserForm({...userForm, role: e.target.value as UserRole})}
+                  className="w-full rounded-2xl bg-slate-50/50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-3 text-sm dark:text-white outline-none focus:ring-2 focus:ring-primary transition-all"
+                >
+                  <option value={UserRole.ADMIN}>Administrator (Full Akses)</option>
+                  <option value={UserRole.BENDAHARA}>Bendahara (Keuangan)</option>
+                  <option value={UserRole.PENGURUS}>Pengurus (Input Data)</option>
+                </select>
+              </div>
+              <button type="submit" className="w-full py-4 bg-primary text-white font-black rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all uppercase text-xs tracking-widest">Simpan Pengguna</button>
+            </form>
+          </div>
+        </div>
+      )}
+
       <header className="mb-10">
         <h1 className="text-3xl md:text-4xl font-black tracking-tight text-slate-600 dark:text-white">Pengaturan Sistem</h1>
-        <p className="text-slate-500 dark:text-slate-400 mt-2 text-base md:text-lg">Konfigurasi identitas, cloud database, dan cadangan data.</p>
+        <p className="text-slate-500 dark:text-slate-400 mt-2 text-base md:text-lg">Konfigurasi identitas, manajemen pengguna, cloud database, dan cadangan data.</p>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
@@ -187,6 +280,73 @@ const Pengaturan: React.FC<PengaturanProps> = ({
                 </button>
               </div>
             </form>
+          </section>
+
+          {/* User Management Section */}
+          <section className="bg-white dark:bg-card-dark rounded-[32px] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+            <div className="px-8 py-6 border-b border-slate-50 dark:border-slate-800 bg-slate-50/30 dark:bg-transparent flex justify-between items-center">
+              <h2 className="text-lg font-black dark:text-white flex items-center gap-3">
+                <span className="material-symbols-outlined text-primary">group</span>
+                Manajemen Pengguna
+              </h2>
+              <button 
+                onClick={() => openUserModal()}
+                className="flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary hover:text-white transition-all"
+              >
+                <span className="material-symbols-outlined text-sm">add</span>
+                Tambah User
+              </button>
+            </div>
+            
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead className="bg-slate-50 dark:bg-slate-800/40 text-[9px] font-black uppercase tracking-widest text-slate-400">
+                  <tr>
+                    <th className="px-8 py-4">Nama / Jabatan</th>
+                    <th className="px-8 py-4">User ID</th>
+                    <th className="px-8 py-4">Role</th>
+                    <th className="px-8 py-4 text-right">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
+                  {listUsers.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="px-8 py-10 text-center text-slate-300 italic text-xs uppercase font-bold tracking-widest">Belum ada pengguna tambahan</td>
+                    </tr>
+                  ) : (
+                    listUsers.map((user) => (
+                      <tr key={user.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/20 transition-colors">
+                        <td className="px-8 py-5">
+                          <p className="font-black text-slate-600 dark:text-white text-sm">{user.nama}</p>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{user.jabatan}</p>
+                        </td>
+                        <td className="px-8 py-5">
+                          <code className="text-xs bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-lg text-slate-500">{user.userId}</code>
+                        </td>
+                        <td className="px-8 py-5">
+                          <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
+                            user.role === UserRole.ADMIN ? 'bg-indigo-100 text-indigo-500' : 
+                            user.role === UserRole.BENDAHARA ? 'bg-emerald-100 text-emerald-500' : 'bg-slate-100 text-slate-400'
+                          }`}>
+                            {user.role}
+                          </span>
+                        </td>
+                        <td className="px-8 py-5 text-right">
+                          <div className="flex justify-end gap-2">
+                            <button onClick={() => openUserModal(user)} className="size-8 flex items-center justify-center rounded-lg text-slate-300 hover:bg-primary/10 hover:text-primary transition-all">
+                              <span className="material-symbols-outlined text-lg">edit</span>
+                            </button>
+                            <button onClick={() => onDeleteUser(user.id)} className="size-8 flex items-center justify-center rounded-lg text-slate-300 hover:bg-rose-50 hover:text-rose-500 transition-all">
+                              <span className="material-symbols-outlined text-lg">delete</span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </section>
 
           {/* Cloud Section */}
@@ -324,6 +484,10 @@ const Pengaturan: React.FC<PengaturanProps> = ({
                  <div className="flex justify-between items-center">
                     <p className="text-xs font-bold text-slate-500">Total Transaksi</p>
                     <p className="text-sm font-black dark:text-white">{listTransaksi.length}</p>
+                 </div>
+                 <div className="flex justify-between items-center">
+                    <p className="text-xs font-bold text-slate-500">Total Pengguna</p>
+                    <p className="text-sm font-black dark:text-white">{listUsers.length}</p>
                  </div>
                  <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
                     <p className="text-[9px] text-slate-400 font-medium italic">Versi Aplikasi: 2.5.0</p>
