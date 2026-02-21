@@ -1,4 +1,3 @@
-
 {
   "name": "jimpitan-rt-digital",
   "private": true,
@@ -11,10 +10,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
+    "date-fns": "^4.1.0",
+    "lucide-react": "^0.575.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "recharts": "^2.15.0",
-    "@supabase/supabase-js": "^2.45.4"
+    "recharts": "^2.15.0"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",
