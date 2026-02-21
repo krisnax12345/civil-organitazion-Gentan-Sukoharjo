@@ -5,11 +5,16 @@ import { Warga } from '../types';
 interface MasterDataProps {
   listWarga: Warga[];
   onDelete: (id: string) => void;
+  onUpdate: (id: string, updated: Partial<Warga>) => void;
 }
 
-const MasterData: React.FC<MasterDataProps> = ({ listWarga, onDelete }) => {
+const MasterData: React.FC<MasterDataProps> = ({ listWarga, onDelete, onUpdate }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterBlok, setFilterBlok] = useState('Semua');
+  
+  // State untuk Edit
+  const [editingWarga, setEditingWarga] = useState<Warga | null>(null);
+  const [editForm, setEditForm] = useState({ nama: '', noKK: '', whatsapp: '', blok: '' });
 
   // Mendapatkan daftar blok unik untuk filter
   const uniqueBloks = useMemo(() => {
@@ -32,6 +37,23 @@ const MasterData: React.FC<MasterDataProps> = ({ listWarga, onDelete }) => {
       })
       .sort((a, b) => a.nama.localeCompare(b.nama));
   }, [listWarga, searchTerm, filterBlok]);
+
+  const handleEditClick = (warga: Warga) => {
+    setEditingWarga(warga);
+    setEditForm({
+      nama: warga.nama,
+      noKK: warga.noKK,
+      whatsapp: warga.whatsapp,
+      blok: warga.blok
+    });
+  };
+
+  const handleUpdateSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingWarga) return;
+    onUpdate(editingWarga.id, editForm);
+    setEditingWarga(null);
+  };
 
   const exportToCSV = () => {
     if (listWarga.length === 0) return;
@@ -59,6 +81,61 @@ const MasterData: React.FC<MasterDataProps> = ({ listWarga, onDelete }) => {
 
   return (
     <div className="p-5 md:p-10 max-w-7xl mx-auto w-full">
+      {/* Modal Edit */}
+      {editingWarga && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white dark:bg-card-dark rounded-[40px] w-full max-w-lg border border-slate-100 dark:border-slate-800 shadow-2xl overflow-hidden">
+            <div className="p-8 border-b border-slate-50 dark:border-slate-800 flex justify-between items-center bg-slate-50/30 dark:bg-transparent">
+              <h3 className="text-xl font-black dark:text-white tracking-tight uppercase">Edit Data Warga</h3>
+              <button onClick={() => setEditingWarga(null)} className="size-10 flex items-center justify-center rounded-2xl text-slate-300 hover:bg-rose-50 hover:text-rose-500 transition-all">
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <form onSubmit={handleUpdateSubmit} className="p-8 space-y-6">
+              <div className="grid grid-cols-1 gap-5">
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Nama Lengkap</label>
+                  <input 
+                    required 
+                    value={editForm.nama} 
+                    onChange={e => setEditForm({...editForm, nama: e.target.value})} 
+                    className="w-full rounded-2xl bg-slate-50/50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-4 text-sm dark:text-white outline-none focus:ring-2 focus:ring-primary transition-all" 
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">No KK</label>
+                  <input 
+                    required 
+                    value={editForm.noKK} 
+                    onChange={e => setEditForm({...editForm, noKK: e.target.value})} 
+                    className="w-full rounded-2xl bg-slate-50/50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-4 text-sm dark:text-white outline-none focus:ring-2 focus:ring-primary transition-all" 
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">WhatsApp</label>
+                    <input 
+                      value={editForm.whatsapp} 
+                      onChange={e => setEditForm({...editForm, whatsapp: e.target.value})} 
+                      className="w-full rounded-2xl bg-slate-50/50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-4 text-sm dark:text-white outline-none focus:ring-2 focus:ring-primary transition-all" 
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Blok</label>
+                    <input 
+                      value={editForm.blok} 
+                      onChange={e => setEditForm({...editForm, blok: e.target.value})} 
+                      className="w-full rounded-2xl bg-slate-50/50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-4 text-sm dark:text-white outline-none focus:ring-2 focus:ring-primary transition-all" 
+                    />
+                  </div>
+                </div>
+              </div>
+              <button type="submit" className="w-full py-5 bg-primary text-white font-black rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all">SIMPAN PERUBAHAN</button>
+            </form>
+          </div>
+        </div>
+      )}
+
       <header className="mb-8 md:mb-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
           <h1 className="text-3xl md:text-4xl font-black tracking-tight text-slate-600 dark:text-white">Master Data Warga</h1>
@@ -154,7 +231,14 @@ const MasterData: React.FC<MasterDataProps> = ({ listWarga, onDelete }) => {
                       <p className="text-xs text-slate-400 font-medium">{warga.terdaftarAt}</p>
                     </td>
                     <td className="px-8 py-6">
-                      <div className="flex items-center justify-center">
+                      <div className="flex items-center justify-center gap-2">
+                        <button 
+                          onClick={() => handleEditClick(warga)}
+                          className="p-3 hover:bg-primary/10 hover:text-primary rounded-2xl transition-all text-slate-300"
+                          title="Edit Data"
+                        >
+                          <span className="material-symbols-outlined text-xl">edit</span>
+                        </button>
                         <button 
                           onClick={() => onDelete(warga.id)}
                           className="p-3 hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-500/10 rounded-2xl transition-all text-slate-300"

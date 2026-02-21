@@ -9,6 +9,7 @@ import IuranHarian from './components/IuranHarian';
 import LaporanKeuangan from './components/LaporanKeuangan';
 import PengeluaranKas from './components/PengeluaranKas';
 import CloudBackup from './components/CloudBackup';
+import Pengaturan from './components/Pengaturan';
 import Login from './components/Login';
 import { AppView, Warga, Transaksi } from './types';
 
@@ -48,6 +49,9 @@ const App: React.FC = () => {
 
   // Data State
   const [nominalWajib, setNominalWajib] = useState(500);
+  const [instansiName, setInstansiName] = useState(() => localStorage.getItem('rt_instansi_name') || 'Jimpitan RT');
+  const [instansiAddress, setInstansiAddress] = useState(() => localStorage.getItem('rt_instansi_address') || 'Lingkungan Aman Damai');
+  const [instansiLogo, setInstansiLogo] = useState(() => localStorage.getItem('rt_instansi_logo') || '');
   const [listWarga, setListWarga] = useState<Warga[]>([]);
   const [listTransaksi, setListTransaksi] = useState<Transaksi[]>([]);
   const [iuranHarian, setIuranHarian] = useState<Record<string, Record<string, number>>>({});
@@ -114,8 +118,17 @@ const App: React.FC = () => {
       }
 
       // Fetch Settings
-      const { data: settingData } = await supabase.from('pengaturan').select('*').eq('kunci', 'nominal_wajib').single();
-      if (settingData) setNominalWajib(parseInt(settingData.nilai));
+      const { data: settingData } = await supabase.from('pengaturan').select('*');
+      if (settingData) {
+        const nominal = settingData.find(s => s.kunci === 'nominal_wajib');
+        const name = settingData.find(s => s.kunci === 'instansi_name');
+        const address = settingData.find(s => s.kunci === 'instansi_address');
+        const logo = settingData.find(s => s.kunci === 'instansi_logo');
+        if (nominal) setNominalWajib(parseInt(nominal.nilai));
+        if (name) setInstansiName(name.nilai);
+        if (address) setInstansiAddress(address.nilai);
+        if (logo) setInstansiLogo(logo.nilai);
+      }
 
     } catch (error: any) {
       console.error('Cloud Sync Error:', error.message);
@@ -138,10 +151,13 @@ const App: React.FC = () => {
     localStorage.setItem('rt_iuran', JSON.stringify(iuranHarian));
     localStorage.setItem('rt_supabase_url', cloudConfig.url);
     localStorage.setItem('rt_supabase_key', cloudConfig.key);
+    localStorage.setItem('rt_instansi_name', instansiName);
+    localStorage.setItem('rt_instansi_address', instansiAddress);
+    localStorage.setItem('rt_instansi_logo', instansiLogo);
     
     if (isDarkMode) document.documentElement.classList.add('dark');
     else document.documentElement.classList.remove('dark');
-  }, [isAuthenticated, currentUser, isDarkMode, listWarga, listTransaksi, iuranHarian, cloudConfig]);
+  }, [isAuthenticated, currentUser, isDarkMode, listWarga, listTransaksi, iuranHarian, cloudConfig, instansiName]);
 
   const updateCloudSettings = (url: string, key: string) => {
     setCloudConfig({ url, key });
@@ -164,6 +180,18 @@ const App: React.FC = () => {
     if (supabase) await supabase.from('warga').insert([{ id: newId, nama: warga.nama, no_kk: warga.noKK, whatsapp: warga.whatsapp, blok: warga.blok }]);
   };
 
+  const updateWarga = async (id: string, updated: Partial<Warga>) => {
+    setListWarga(prev => prev.map(w => w.id === id ? { ...w, ...updated } : w));
+    if (supabase) {
+      const payload: any = {};
+      if (updated.nama) payload.nama = updated.nama;
+      if (updated.noKK) payload.no_kk = updated.noKK;
+      if (updated.whatsapp) payload.whatsapp = updated.whatsapp;
+      if (updated.blok) payload.blok = updated.blok;
+      await supabase.from('warga').update(payload).eq('id', id);
+    }
+  };
+
   const deleteWarga = async (id: string) => {
     if(!confirm('Hapus data warga ini?')) return;
     setListWarga(prev => prev.filter(w => w.id !== id));
@@ -183,21 +211,113 @@ const App: React.FC = () => {
     if (supabase) await supabase.from('pengaturan').upsert({ kunci: 'nominal_wajib', nilai: val.toString() });
   };
 
+  const updateInstansiProfile = async (name: string, address: string, logo: string) => {
+    setInstansiName(name);
+    setInstansiAddress(address);
+    setInstansiLogo(logo);
+    if (supabase) {
+      await supabase.from('pengaturan').upsert([
+        { kunci: 'instansi_name', nilai: name },
+        { kunci: 'instansi_address', nilai: address },
+        { kunci: 'instansi_logo', nilai: logo }
+      ]);
+    }
+  };
+
   const recordIuranMulti = async (wargaId: string, days: number[], month: number, year: number, totalAmount: number) => {
     const warga = listWarga.find(w => w.id === wargaId);
     if (!warga || days.length === 0) return;
     const amountPerDay = Math.floor(totalAmount / days.length);
     const monthStr = String(month).padStart(2, '0');
+    
     setIuranHarian(prev => {
       const newWargaIuran = { ...(prev[wargaId] || {}) };
-      days.forEach(day => { const dateKey = `${year}-${monthStr}-${String(day).padStart(2, '0')}`; newWargaIuran[dateKey] = (newWargaIuran[dateKey] || 0) + amountPerDay; });
+      days.forEach(day => { 
+        const dateKey = `${year}-${monthStr}-${String(day).padStart(2, '0')}`; 
+        newWargaIuran[dateKey] = (newWargaIuran[dateKey] || 0) + amountPerDay; 
+      });
       return { ...prev, [wargaId]: newWargaIuran };
     });
+
     if (supabase) {
-      const payload = days.map(day => ({ warga_id: wargaId, tanggal: `${year}-${monthStr}-${String(day).padStart(2, '0')}`, jumlah: amountPerDay }));
+      const payload = days.map(day => ({ 
+        warga_id: wargaId, 
+        tanggal: `${year}-${monthStr}-${String(day).padStart(2, '0')}`, 
+        jumlah: amountPerDay 
+      }));
       await supabase.from('iuran_harian').upsert(payload, { onConflict: 'warga_id,tanggal' });
     }
-    addTransaksi({ tanggal: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }), keterangan: `Iuran: ${warga.nama}`, subKeterangan: `${new Date(year, month - 1).toLocaleDateString('id-ID', { month: 'long' })} ${year}`, kategori: 'masuk', jumlah: totalAmount });
+
+    addTransaksi({ 
+      tanggal: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }), 
+      keterangan: `Iuran: ${warga.nama}`, 
+      subKeterangan: `Harian (${days.length} hari) - ${new Date(year, month - 1).toLocaleDateString('id-ID', { month: 'short' })} ${year}`, 
+      kategori: 'masuk', 
+      jumlah: totalAmount 
+    });
+  };
+
+  const recordIuranBulk = async (wargaId: string, startMonth: number, startYear: number, totalMonths: number, totalAmount: number) => {
+    const warga = listWarga.find(w => w.id === wargaId);
+    if (!warga) return;
+
+    const monthEntries: {tanggal: string, jumlah: number}[] = [];
+    let currentM = startMonth;
+    let currentY = startYear;
+    const amountPerMonth = Math.floor(totalAmount / totalMonths);
+
+    setIuranHarian(prev => {
+      const newWargaIuran = { ...(prev[wargaId] || {}) };
+      for (let i = 0; i < totalMonths; i++) {
+        const mStr = String(currentM).padStart(2, '0');
+        // Kita catat sebagai tanggal 01 di bulan tersebut untuk matriks
+        const dateKey = `${currentY}-${mStr}-01`;
+        newWargaIuran[dateKey] = (newWargaIuran[dateKey] || 0) + amountPerMonth;
+        monthEntries.push({ warga_id: wargaId, tanggal: dateKey, jumlah: amountPerMonth } as any);
+        
+        currentM++;
+        if (currentM > 12) { currentM = 1; currentY++; }
+      }
+      return { ...prev, [wargaId]: newWargaIuran };
+    });
+
+    if (supabase) {
+      await supabase.from('iuran_harian').upsert(monthEntries, { onConflict: 'warga_id,tanggal' });
+    }
+
+    addTransaksi({ 
+      tanggal: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }), 
+      keterangan: `Iuran Paket: ${warga.nama}`, 
+      subKeterangan: `Paket ${totalMonths} Bulan`, 
+      kategori: 'masuk', 
+      jumlah: totalAmount 
+    });
+  };
+
+  const recordIuranCustom = async (wargaId: string, totalAmount: number, keterangan?: string) => {
+    const warga = listWarga.find(w => w.id === wargaId);
+    if (!warga) return;
+
+    const today = new Date();
+    const dateKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+    setIuranHarian(prev => {
+      const newWargaIuran = { ...(prev[wargaId] || {}) };
+      newWargaIuran[dateKey] = (newWargaIuran[dateKey] || 0) + totalAmount;
+      return { ...prev, [wargaId]: newWargaIuran };
+    });
+
+    if (supabase) {
+      await supabase.from('iuran_harian').upsert([{ warga_id: wargaId, tanggal: dateKey, jumlah: totalAmount }], { onConflict: 'warga_id,tanggal' });
+    }
+
+    addTransaksi({ 
+      tanggal: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }), 
+      keterangan: `Iuran Bebas: ${warga.nama}`, 
+      subKeterangan: keterangan || 'Pembayaran Custom', 
+      kategori: 'masuk', 
+      jumlah: totalAmount 
+    });
   };
 
   const renderContent = () => {
@@ -235,14 +355,15 @@ const App: React.FC = () => {
         
         {(() => {
           switch (activeView) {
-            case AppView.DASHBOARD: return <Dashboard listWarga={listWarga} listTransaksi={listTransaksi} iuranData={iuranHarian} nominalWajib={nominalWajib} currentUser={currentUser} />;
-            case AppView.MASTER_DATA: return <MasterData listWarga={listWarga} onDelete={deleteWarga} />;
+            case AppView.DASHBOARD: return <Dashboard listWarga={listWarga} listTransaksi={listTransaksi} iuranData={iuranHarian} nominalWajib={nominalWajib} currentUser={currentUser} instansiName={instansiName} />;
+            case AppView.MASTER_DATA: return <MasterData listWarga={listWarga} onDelete={deleteWarga} onUpdate={updateWarga} />;
             case AppView.MANAJEMEN_WARGA: return <ManajemenWarga listWarga={listWarga} onAdd={addWarga} onDelete={deleteWarga} />;
-            case AppView.IURAN_HARIAN: return <IuranHarian listWarga={listWarga} listTransaksi={listTransaksi} iuranData={iuranHarian} onRecordMulti={recordIuranMulti} nominalWajib={nominalWajib} setNominalWajib={updateNominalGlobal} />;
+            case AppView.IURAN_HARIAN: return <IuranHarian listWarga={listWarga} listTransaksi={listTransaksi} iuranData={iuranHarian} onRecordMulti={recordIuranMulti} onRecordBulk={recordIuranBulk} onRecordCustom={recordIuranCustom} nominalWajib={nominalWajib} setNominalWajib={updateNominalGlobal} />;
             case AppView.PENGELUARAN_KAS: return <PengeluaranKas listTransaksi={listTransaksi} onAddPengeluaran={addTransaksi} />;
-            case AppView.LAPORAN_KEUANGAN: return <LaporanKeuangan listTransaksi={listTransaksi} onAddTransaksi={addTransaksi} />;
+            case AppView.LAPORAN_KEUANGAN: return <LaporanKeuangan listTransaksi={listTransaksi} onAddTransaksi={addTransaksi} instansiName={instansiName} instansiAddress={instansiAddress} instansiLogo={instansiLogo} />;
             case AppView.CLOUD_BACKUP: return <CloudBackup listWarga={listWarga} listTransaksi={listTransaksi} iuranData={iuranHarian} onImport={fetchAllData} onUpdateCloudConfig={updateCloudSettings} currentConfig={cloudConfig} />;
-            default: return <Dashboard listWarga={listWarga} listTransaksi={listTransaksi} iuranData={iuranHarian} nominalWajib={nominalWajib} currentUser={currentUser} />;
+            case AppView.PENGATURAN: return <Pengaturan instansiName={instansiName} instansiAddress={instansiAddress} instansiLogo={instansiLogo} onUpdateInstansiProfile={updateInstansiProfile} />;
+            default: return <Dashboard listWarga={listWarga} listTransaksi={listTransaksi} iuranData={iuranHarian} nominalWajib={nominalWajib} currentUser={currentUser} instansiName={instansiName} />;
           }
         })()}
       </div>
@@ -253,7 +374,7 @@ const App: React.FC = () => {
 
   return (
     <div className="flex flex-col lg:flex-row h-screen overflow-hidden bg-background-light dark:bg-background-dark text-slate-600 dark:text-slate-100">
-      <Sidebar activeView={activeView} setActiveView={setActiveView} isDarkMode={isDarkMode} toggleDarkMode={() => setIsDarkMode(!isDarkMode)} onLogout={handleLogout} currentUser={currentUser} />
+      <Sidebar activeView={activeView} setActiveView={setActiveView} isDarkMode={isDarkMode} toggleDarkMode={() => setIsDarkMode(!isDarkMode)} onLogout={handleLogout} currentUser={currentUser} instansiName={instansiName} instansiLogo={instansiLogo} />
       <main className="flex-1 overflow-y-auto custom-scrollbar pb-24 lg:pb-0">
         <div className="fixed top-5 right-5 z-50 pointer-events-none no-print">
             {supabase ? (

@@ -9,9 +9,20 @@ interface SidebarProps {
   toggleDarkMode: () => void;
   onLogout?: () => void;
   currentUser?: string;
+  instansiName?: string;
+  instansiLogo?: string;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, isDarkMode, toggleDarkMode, onLogout, currentUser = 'Admin' }) => {
+const Sidebar: React.FC<SidebarProps> = ({ 
+  activeView, 
+  setActiveView, 
+  isDarkMode, 
+  toggleDarkMode, 
+  onLogout, 
+  currentUser = 'Admin', 
+  instansiName = 'Jimpitan RT',
+  instansiLogo = ''
+}) => {
   const navItems = [
     { id: AppView.DASHBOARD, label: 'Dasbor', icon: 'dashboard' },
     { id: AppView.MANAJEMEN_WARGA, label: 'Input Warga', icon: 'person_add' },
@@ -20,6 +31,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, isDarkMode
     { id: AppView.LAPORAN_KEUANGAN, label: 'Laporan', icon: 'analytics' },
     { id: AppView.CLOUD_BACKUP, label: 'Cloud Backup', icon: 'cloud_sync' },
     { id: AppView.MASTER_DATA, label: 'Master Data', icon: 'database' },
+    { id: AppView.PENGATURAN, label: 'Pengaturan', icon: 'settings' },
   ];
 
   return (
@@ -28,11 +40,15 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, isDarkMode
       <aside className="hidden lg:flex w-72 bg-white dark:bg-card-dark border-r border-slate-200 dark:border-slate-800 flex-col shrink-0 transition-colors duration-300">
         <div className="p-8 flex flex-col gap-10 h-full">
           <div className="flex items-center gap-4">
-            <div className="bg-primary/20 p-2.5 rounded-2xl flex items-center justify-center">
-              <span className="material-symbols-outlined text-primary text-2xl font-bold">savings</span>
-            </div>
+            {instansiLogo ? (
+              <img src={instansiLogo} alt="Logo" className="size-11 object-contain rounded-xl bg-white p-1 shadow-sm" />
+            ) : (
+              <div className="bg-primary/20 p-2.5 rounded-2xl flex items-center justify-center">
+                <span className="material-symbols-outlined text-primary text-2xl font-bold">savings</span>
+              </div>
+            )}
             <div className="flex flex-col">
-              <h1 className="text-slate-600 dark:text-white text-lg font-black tracking-tight leading-none">Jimpitan RT</h1>
+              <h1 className="text-slate-600 dark:text-white text-lg font-black tracking-tight leading-none truncate max-w-[160px]">{instansiName}</h1>
               <p className="text-slate-400 dark:text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-1">Digital System</p>
             </div>
           </div>

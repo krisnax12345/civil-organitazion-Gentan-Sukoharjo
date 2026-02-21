@@ -9,9 +9,19 @@ interface DashboardProps {
   iuranData?: Record<string, Record<string, number>>;
   nominalWajib?: number;
   currentUser?: string;
+  instansiName?: string;
+  instansiLogo?: string;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ listWarga, listTransaksi, iuranData = {}, nominalWajib = 500, currentUser = 'Pengurus' }) => {
+const Dashboard: React.FC<DashboardProps> = ({ 
+  listWarga, 
+  listTransaksi, 
+  iuranData = {}, 
+  nominalWajib = 500, 
+  currentUser = 'Pengurus', 
+  instansiName = 'Jimpitan RT',
+  instansiLogo = ''
+}) => {
   const currentYear = new Date().getFullYear();
   const [matrixYear, setMatrixYear] = useState(currentYear);
   const [selectedCheckId, setSelectedCheckId] = useState<string>('');
@@ -22,16 +32,24 @@ const Dashboard: React.FC<DashboardProps> = ({ listWarga, listTransaksi, iuranDa
   ];
 
   const today = new Date();
+  const currentMonth = today.getMonth();
   const startOfYear = new Date(currentYear, 0, 1);
   const diffTime = Math.abs(today.getTime() - startOfYear.getTime());
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   const kewajibanYTD = diffDays * (nominalWajib || 500);
 
   const totalSaldo = listTransaksi.reduce((acc, t) => acc + (t.kategori === 'masuk' ? t.jumlah : -t.jumlah), 0);
-  const pemasukanBulanIni = listTransaksi
+  
+  const filteredBulanIni = listTransaksi.filter(t => {
+    const tDate = new Date(t.timestamp);
+    return tDate.getMonth() === currentMonth && tDate.getFullYear() === currentYear;
+  });
+
+  const pemasukanBulanIni = filteredBulanIni
     .filter(t => t.kategori === 'masuk')
     .reduce((acc, t) => acc + t.jumlah, 0);
-  const pengeluaranBulanIni = listTransaksi
+    
+  const pengeluaranBulanIni = filteredBulanIni
     .filter(t => t.kategori === 'keluar')
     .reduce((acc, t) => acc + t.jumlah, 0);
 
@@ -122,8 +140,20 @@ const Dashboard: React.FC<DashboardProps> = ({ listWarga, listTransaksi, iuranDa
   return (
     <div className="p-5 md:p-10 max-w-7xl mx-auto w-full">
       <header className="mb-8 md:mb-10">
-        <h2 className="text-3xl md:text-4xl font-black text-slate-600 dark:text-white tracking-tight">Halo, {currentUser}</h2>
-        <p className="text-slate-500 dark:text-slate-400 mt-2 text-base md:text-lg">Ringkasan kondisi keuangan dan partisipasi warga (Tahun {currentYear}).</p>
+        <div className="flex items-center gap-4 mb-4">
+           {instansiLogo ? (
+             <img src={instansiLogo} alt="Logo" className="size-12 object-contain rounded-lg bg-white p-1 shadow-sm" />
+           ) : (
+             <div className="size-12 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
+                <span className="material-symbols-outlined text-2xl">savings</span>
+             </div>
+           )}
+           <div>
+             <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">{instansiName}</p>
+             <h2 className="text-3xl md:text-4xl font-black text-slate-600 dark:text-white tracking-tight leading-none mt-1">Halo, {currentUser}</h2>
+           </div>
+        </div>
+        <p className="text-slate-500 dark:text-slate-400 text-base md:text-lg">Ringkasan kondisi keuangan dan partisipasi warga (Tahun {currentYear}).</p>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8 mb-8 md:mb-10">

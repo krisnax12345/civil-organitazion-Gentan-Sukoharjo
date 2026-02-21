@@ -6,9 +6,18 @@ interface LaporanKeuanganProps {
   listTransaksi: Transaksi[];
   // Fix: changed Omit<Transaksi, 'id'> to Omit<Transaksi, 'id' | 'timestamp'> to match App.tsx implementation
   onAddTransaksi: (t: Omit<Transaksi, 'id' | 'timestamp'>) => void;
+  instansiName?: string;
+  instansiAddress?: string;
+  instansiLogo?: string;
 }
 
-const LaporanKeuangan: React.FC<LaporanKeuanganProps> = ({ listTransaksi, onAddTransaksi }) => {
+const LaporanKeuangan: React.FC<LaporanKeuanganProps> = ({ 
+  listTransaksi, 
+  onAddTransaksi, 
+  instansiName = 'Jimpitan RT', 
+  instansiAddress = 'Lingkungan Aman Damai',
+  instansiLogo = ''
+}) => {
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
     tanggal: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }),
@@ -90,9 +99,16 @@ const LaporanKeuangan: React.FC<LaporanKeuanganProps> = ({ listTransaksi, onAddT
 
       {/* Header Khusus Print */}
       <div className="print-header">
-        <h1 className="text-2xl font-bold uppercase">Laporan Kas Jimpitan Digital</h1>
-        <p className="text-sm">RT 05 / RW 12 - Lingkungan Aman Damai</p>
-        <p className="text-xs mt-1">Dicetak pada: {new Date().toLocaleString('id-ID')}</p>
+        <div className="flex items-center justify-center gap-6 mb-4">
+          {instansiLogo && <img src={instansiLogo} alt="Logo" className="size-20 object-contain" />}
+          <div className="text-center">
+            <h1 className="text-2xl font-bold uppercase">{instansiName}</h1>
+            <p className="text-sm max-w-md mx-auto">{instansiAddress}</p>
+          </div>
+        </div>
+        <div className="border-b-4 border-double border-black mb-6"></div>
+        <h2 className="text-xl font-bold uppercase text-center mb-2">Laporan Kas Jimpitan Digital</h2>
+        <p className="text-xs text-center">Dicetak pada: {new Date().toLocaleString('id-ID')}</p>
       </div>
 
       {showModal && (
