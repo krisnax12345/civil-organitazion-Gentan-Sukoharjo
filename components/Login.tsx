@@ -1,9 +1,9 @@
 
 import React, { useState } from 'react';
-import { User } from '../types';
+import { User, UserRole } from '../types';
 
 interface LoginProps {
-  onLoginSuccess: (userId: string) => void;
+  onLoginSuccess: (user: Partial<User> & { nama: string, role: UserRole }) => void;
   listUsers: User[];
 }
 
@@ -21,10 +21,12 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, listUsers }) => {
     // Simulasi delay login untuk UX
     setTimeout(() => {
       // Cek default admin atau user dari list
-      const user = listUsers.find(u => u.userId === userId && u.pass === password);
+      const foundUser = listUsers.find(u => u.userId === userId && u.pass === password);
       
-      if ((userId === 'sinoman01' && password === 'sinoman') || user) {
-        onLoginSuccess(userId);
+      if (userId === 'sinoman01' && password === 'sinoman') {
+        onLoginSuccess({ nama: 'Super Admin', role: UserRole.ADMIN });
+      } else if (foundUser) {
+        onLoginSuccess(foundUser);
       } else {
         setError('User ID atau Password salah. Silakan coba lagi.');
         setIsLoading(false);
