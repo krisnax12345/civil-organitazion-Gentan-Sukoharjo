@@ -437,7 +437,7 @@ const LaporanKeuangan: React.FC<LaporanKeuanganProps> = ({
         <div className="overflow-x-auto">
           {filteredTransaksi.length === 0 ? (
             <div className="p-24 text-center">
-              <RefreshCw className="text-slate-200 size-16 mx-auto mb-4 animate-spin-slow" />
+              <RefreshCw className="text-slate-200 size-16 mx-auto mb-4 animate-spin" />
               <p className="italic text-slate-300 font-bold uppercase tracking-widest text-xs">Tidak ada data untuk periode ini</p>
               <button 
                 onClick={() => setSelectedPeriod('all')}
