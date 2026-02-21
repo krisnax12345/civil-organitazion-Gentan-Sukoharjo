@@ -223,6 +223,35 @@ const App: React.FC = () => {
     }
   };
 
+  const resetAllData = async () => {
+    if (!confirm('PERINGATAN KRITIS: Seluruh data Warga, Transaksi, dan Iuran akan dihapus PERMANEN. Tindakan ini tidak bisa dibatalkan. Lanjutkan?')) return;
+    
+    setListWarga([]);
+    setListTransaksi([]);
+    setIuranHarian({});
+    
+    localStorage.removeItem('rt_warga');
+    localStorage.removeItem('rt_transaksi');
+    localStorage.removeItem('rt_iuran');
+
+    if (supabase) {
+      try {
+        // Menghapus semua baris dengan filter yang selalu benar
+        await supabase.from('iuran_harian').delete().neq('id', 0);
+        await supabase.from('transaksi').delete().filter('jumlah', 'gte', 0);
+        await supabase.from('warga').delete().filter('nama', 'neq', '___');
+        alert('Data di Cloud dan Lokal berhasil dibersihkan.');
+      } catch (error: any) {
+        console.error('Reset Error:', error.message);
+        alert('Data lokal berhasil dihapus, namun gagal membersihkan Cloud: ' + error.message);
+      }
+    } else {
+      alert('Data lokal berhasil dibersihkan.');
+    }
+    
+    setActiveView(AppView.DASHBOARD);
+  };
+
   const recordIuranMulti = async (wargaId: string, days: number[], month: number, year: number, totalAmount: number) => {
     const warga = listWarga.find(w => w.id === wargaId);
     if (!warga || days.length === 0) return;
@@ -372,6 +401,7 @@ const App: React.FC = () => {
                 onImport={fetchAllData}
                 onUpdateCloudConfig={updateCloudSettings}
                 currentCloudConfig={cloudConfig}
+                onResetAllData={resetAllData}
               />
             );
             default: return <Dashboard listWarga={listWarga} listTransaksi={listTransaksi} iuranData={iuranHarian} nominalWajib={nominalWajib} currentUser={currentUser} instansiName={instansiName} instansiLogo={instansiLogo} />;

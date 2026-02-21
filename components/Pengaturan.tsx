@@ -14,6 +14,7 @@ interface PengaturanProps {
   onImport: (data: any) => void;
   onUpdateCloudConfig: (url: string, key: string) => void;
   currentCloudConfig: { url: string; key: string };
+  onResetAllData: () => void;
 }
 
 const Pengaturan: React.FC<PengaturanProps> = ({ 
@@ -26,7 +27,8 @@ const Pengaturan: React.FC<PengaturanProps> = ({
   iuranData,
   onImport,
   onUpdateCloudConfig,
-  currentCloudConfig
+  currentCloudConfig,
+  onResetAllData
 }) => {
   const [tempName, setTempName] = useState(instansiName);
   const [tempAddress, setTempAddress] = useState(instansiAddress);
@@ -274,6 +276,31 @@ const Pengaturan: React.FC<PengaturanProps> = ({
                   </button>
                   <input type="file" ref={fileInputRef} onChange={handleImport} accept=".json" className="hidden" />
                </div>
+            </div>
+          </section>
+
+          {/* Danger Zone */}
+          <section className="bg-rose-50/30 dark:bg-rose-950/10 rounded-[32px] border border-rose-100 dark:border-rose-900/30 shadow-sm overflow-hidden">
+            <div className="px-8 py-6 border-b border-rose-100 dark:border-rose-900/30 bg-rose-50/50 dark:bg-transparent">
+              <h2 className="text-lg font-black text-rose-500 flex items-center gap-3">
+                <span className="material-symbols-outlined">warning</span>
+                Zona Berbahaya
+              </h2>
+            </div>
+            <div className="p-8 flex flex-col md:flex-row items-center justify-between gap-8">
+               <div className="space-y-1">
+                  <p className="text-sm font-black text-slate-700 dark:text-white">Hapus Seluruh Data</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed max-w-md">
+                    Tindakan ini akan menghapus permanen semua data Warga, Transaksi, dan Iuran baik di Lokal maupun di Cloud.
+                  </p>
+               </div>
+               <button 
+                onClick={onResetAllData}
+                className="px-8 py-4 rounded-2xl bg-rose-500 text-white font-black text-[10px] uppercase tracking-widest hover:bg-rose-600 transition-all shadow-xl shadow-rose-500/20 flex items-center gap-3"
+               >
+                 <span className="material-symbols-outlined text-sm">delete_forever</span>
+                 Reset Semua Data
+               </button>
             </div>
           </section>
         </div>
