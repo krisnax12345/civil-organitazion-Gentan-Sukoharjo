@@ -25,7 +25,6 @@ const Dashboard: React.FC<DashboardProps> = ({
   const currentYear = new Date().getFullYear();
   const [matrixYear, setMatrixYear] = useState(currentYear);
   const [selectedCheckId, setSelectedCheckId] = useState<string>('');
-  const [showTunggakanModal, setShowTunggakanModal] = useState(false);
   
   const months = [
     "Jan", "Feb", "Mar", "Apr", "Mei", "Jun", 
@@ -140,54 +139,6 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   return (
     <div className="p-5 md:p-10 max-w-7xl mx-auto w-full">
-      {showTunggakanModal && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white dark:bg-card-dark rounded-[40px] w-full max-w-2xl border border-slate-100 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
-            <div className="p-8 border-b border-slate-50 dark:border-slate-800 flex justify-between items-center bg-slate-50/30 dark:bg-transparent shrink-0">
-              <div>
-                <h3 className="text-xl font-black dark:text-white tracking-tight uppercase">Daftar Tunggakan Warga</h3>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Akumulasi s/d {today.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-              </div>
-              <button onClick={() => setShowTunggakanModal(false)} className="size-10 flex items-center justify-center rounded-2xl text-slate-300 hover:bg-rose-50 hover:text-rose-500 transition-all">
-                <span className="material-symbols-outlined">close</span>
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-8">
-              {dataTunggakanYTD.length === 0 ? (
-                <div className="py-20 text-center">
-                  <span className="material-symbols-outlined text-emerald-500 text-6xl mb-4">verified</span>
-                  <p className="text-sm font-black text-slate-600 dark:text-white uppercase tracking-widest">Semua Warga Lunas!</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {dataTunggakanYTD.map((w, idx) => (
-                    <div key={w.id} className="flex items-center justify-between p-5 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-slate-100 dark:border-slate-800 hover:scale-[1.01] transition-transform">
-                      <div className="flex items-center gap-4">
-                        <div className="size-10 rounded-2xl bg-white dark:bg-slate-900 flex items-center justify-center text-slate-400 font-black text-xs shadow-sm">
-                          {idx + 1}
-                        </div>
-                        <div>
-                          <p className="text-sm font-black dark:text-white">{w.nama}</p>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{w.blok}</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs font-black text-rose-500">Rp {w.sisa.toLocaleString('id-ID')}</p>
-                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Tunggakan</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div className="p-8 border-t border-slate-50 dark:border-slate-800 bg-slate-50/30 dark:bg-transparent shrink-0 flex justify-between items-center">
-               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Akumulasi:</p>
-               <p className="text-xl font-black text-rose-500">Rp {totalTunggakanValue.toLocaleString('id-ID')}</p>
-            </div>
-          </div>
-        </div>
-      )}
-
       <header className="mb-8 md:mb-10">
         <div className="flex items-center gap-4 mb-4">
            {instansiLogo ? (
@@ -210,16 +161,6 @@ const Dashboard: React.FC<DashboardProps> = ({
         <StatCard title="Pemasukan Bulan Ini" value={`Rp ${pemasukanBulanIni.toLocaleString('id-ID')}`} trend={`${listTransaksi.filter(t => t.kategori === 'masuk').length}`} isUp={true} icon="payments" color="text-emerald-500" />
         <StatCard title="Pengeluaran Bulan Ini" value={`Rp ${pengeluaranBulanIni.toLocaleString('id-ID')}`} trend={`${listTransaksi.filter(t => t.kategori === 'keluar').length}`} isUp={false} icon="receipt_long" color="text-rose-400" />
         <StatCard title="Tunggakan s/d Hari Ini" value={`Rp ${totalTunggakanValue.toLocaleString('id-ID')}`} trend={`${dataTunggakanYTD.length} Warga`} isUp={false} icon="warning" color="text-amber-500" subValue="sejak Jan" />
-      </div>
-
-      <div className="mb-8 flex justify-end">
-        <button 
-          onClick={() => setShowTunggakanModal(true)}
-          className="flex items-center gap-3 px-6 py-3 bg-rose-500/10 text-rose-500 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all shadow-sm"
-        >
-          <span className="material-symbols-outlined text-sm">format_list_bulleted</span>
-          Lihat Daftar Tunggakan Lengkap
-        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 md:gap-10">

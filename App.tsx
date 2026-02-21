@@ -433,7 +433,7 @@ const App: React.FC = () => {
             case AppView.MANAJEMEN_WARGA: return <ManajemenWarga listWarga={listWarga} onAdd={addWarga} onDelete={deleteWarga} />;
             case AppView.IURAN_HARIAN: return <IuranHarian listWarga={listWarga} listTransaksi={listTransaksi} iuranData={iuranHarian} onRecordMulti={recordIuranMulti} onRecordBulk={recordIuranBulk} onRecordCustom={recordIuranCustom} nominalWajib={nominalWajib} setNominalWajib={updateNominalGlobal} />;
             case AppView.PENGELUARAN_KAS: return <PengeluaranKas listTransaksi={listTransaksi} onAddPengeluaran={addTransaksi} />;
-            case AppView.LAPORAN_KEUANGAN: return <LaporanKeuangan listTransaksi={listTransaksi} onAddTransaksi={addTransaksi} listWarga={listWarga} iuranData={iuranHarian} nominalWajib={nominalWajib} instansiName={instansiName} instansiAddress={instansiAddress} instansiLogo={instansiLogo} />;
+            case AppView.LAPORAN_KEUANGAN: return <LaporanKeuangan listTransaksi={listTransaksi} onAddTransaksi={addTransaksi} instansiName={instansiName} instansiAddress={instansiAddress} instansiLogo={instansiLogo} />;
             case AppView.PENGATURAN: return (
               <Pengaturan 
                 instansiName={instansiName} 
