@@ -6,7 +6,6 @@ export enum AppView {
   IURAN_HARIAN = 'iuran_harian',
   PENGELUARAN_KAS = 'pengeluaran_kas',
   LAPORAN_KEUANGAN = 'laporan_keuangan',
-  CLOUD_BACKUP = 'cloud_backup',
   PENGATURAN = 'pengaturan'
 }
 

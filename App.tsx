@@ -8,7 +8,6 @@ import ManajemenWarga from './components/ManajemenWarga';
 import IuranHarian from './components/IuranHarian';
 import LaporanKeuangan from './components/LaporanKeuangan';
 import PengeluaranKas from './components/PengeluaranKas';
-import CloudBackup from './components/CloudBackup';
 import Pengaturan from './components/Pengaturan';
 import Login from './components/Login';
 import { AppView, Warga, Transaksi } from './types';
@@ -349,7 +348,7 @@ const App: React.FC = () => {
                   <p className="text-xs font-medium text-slate-600 dark:text-slate-400">Data saat ini tersimpan di browser Anda. Hubungkan ke Supabase untuk sinkronisasi antar perangkat.</p>
                </div>
             </div>
-            <button onClick={() => setActiveView(AppView.CLOUD_BACKUP)} className="px-5 py-2.5 bg-primary text-white text-[10px] font-black uppercase tracking-widest rounded-xl whitespace-nowrap">Setup Sekarang</button>
+            <button onClick={() => setActiveView(AppView.PENGATURAN)} className="px-5 py-2.5 bg-primary text-white text-[10px] font-black uppercase tracking-widest rounded-xl whitespace-nowrap">Setup Sekarang</button>
           </div>
         )}
         
@@ -361,9 +360,21 @@ const App: React.FC = () => {
             case AppView.IURAN_HARIAN: return <IuranHarian listWarga={listWarga} listTransaksi={listTransaksi} iuranData={iuranHarian} onRecordMulti={recordIuranMulti} onRecordBulk={recordIuranBulk} onRecordCustom={recordIuranCustom} nominalWajib={nominalWajib} setNominalWajib={updateNominalGlobal} />;
             case AppView.PENGELUARAN_KAS: return <PengeluaranKas listTransaksi={listTransaksi} onAddPengeluaran={addTransaksi} />;
             case AppView.LAPORAN_KEUANGAN: return <LaporanKeuangan listTransaksi={listTransaksi} onAddTransaksi={addTransaksi} instansiName={instansiName} instansiAddress={instansiAddress} instansiLogo={instansiLogo} />;
-            case AppView.CLOUD_BACKUP: return <CloudBackup listWarga={listWarga} listTransaksi={listTransaksi} iuranData={iuranHarian} onImport={fetchAllData} onUpdateCloudConfig={updateCloudSettings} currentConfig={cloudConfig} />;
-            case AppView.PENGATURAN: return <Pengaturan instansiName={instansiName} instansiAddress={instansiAddress} instansiLogo={instansiLogo} onUpdateInstansiProfile={updateInstansiProfile} />;
-            default: return <Dashboard listWarga={listWarga} listTransaksi={listTransaksi} iuranData={iuranHarian} nominalWajib={nominalWajib} currentUser={currentUser} instansiName={instansiName} />;
+            case AppView.PENGATURAN: return (
+              <Pengaturan 
+                instansiName={instansiName} 
+                instansiAddress={instansiAddress} 
+                instansiLogo={instansiLogo} 
+                onUpdateInstansiProfile={updateInstansiProfile}
+                listWarga={listWarga}
+                listTransaksi={listTransaksi}
+                iuranData={iuranHarian}
+                onImport={fetchAllData}
+                onUpdateCloudConfig={updateCloudSettings}
+                currentCloudConfig={cloudConfig}
+              />
+            );
+            default: return <Dashboard listWarga={listWarga} listTransaksi={listTransaksi} iuranData={iuranHarian} nominalWajib={nominalWajib} currentUser={currentUser} instansiName={instansiName} instansiLogo={instansiLogo} />;
           }
         })()}
       </div>

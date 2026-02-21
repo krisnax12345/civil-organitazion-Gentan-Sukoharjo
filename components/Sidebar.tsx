@@ -29,7 +29,6 @@ const Sidebar: React.FC<SidebarProps> = ({
     { id: AppView.IURAN_HARIAN, label: 'Iuran', icon: 'payments' },
     { id: AppView.PENGELUARAN_KAS, label: 'Belanja', icon: 'shopping_cart' },
     { id: AppView.LAPORAN_KEUANGAN, label: 'Laporan', icon: 'analytics' },
-    { id: AppView.CLOUD_BACKUP, label: 'Cloud Backup', icon: 'cloud_sync' },
     { id: AppView.MASTER_DATA, label: 'Master Data', icon: 'database' },
     { id: AppView.PENGATURAN, label: 'Pengaturan', icon: 'settings' },
   ];
@@ -37,8 +36,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   return (
     <>
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex w-72 bg-white dark:bg-card-dark border-r border-slate-200 dark:border-slate-800 flex-col shrink-0 transition-colors duration-300">
-        <div className="p-8 flex flex-col gap-10 h-full">
+      <aside className="hidden lg:flex w-72 bg-white dark:bg-card-dark border-r border-slate-200 dark:border-slate-800 flex-col shrink-0 transition-colors duration-300 overflow-y-auto custom-scrollbar">
+        <div className="p-8 flex flex-col gap-10 min-h-full">
           <div className="flex items-center gap-4">
             {instansiLogo ? (
               <img src={instansiLogo} alt="Logo" className="size-11 object-contain rounded-xl bg-white p-1 shadow-sm" />
