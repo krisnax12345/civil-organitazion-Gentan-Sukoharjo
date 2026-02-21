@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Warga, Transaksi, UserRole } from '../types';
+import { Warga, Transaksi } from '../types';
 
 interface IuranHarianProps {
   listWarga: Warga[];
@@ -11,7 +11,6 @@ interface IuranHarianProps {
   onRecordCustom?: (wargaId: string, amount: number, keterangan?: string) => void;
   nominalWajib: number;
   setNominalWajib: (val: number) => void;
-  userRole: UserRole;
 }
 
 const IuranHarian: React.FC<IuranHarianProps> = ({ 
@@ -22,8 +21,7 @@ const IuranHarian: React.FC<IuranHarianProps> = ({
   onRecordBulk,
   onRecordCustom,
   nominalWajib, 
-  setNominalWajib,
-  userRole
+  setNominalWajib 
 }) => {
   const today = new Date();
   const currentYear = today.getFullYear();
@@ -248,11 +246,9 @@ const IuranHarian: React.FC<IuranHarianProps> = ({
               ) : (
                 <div className="flex items-center gap-2 mt-1">
                   <p className="text-lg md:text-xl font-black text-slate-600 dark:text-white">Rp {nominalWajib.toLocaleString('id-ID')}</p>
-                  {userRole !== UserRole.PENGURUS && (
-                    <button onClick={() => setIsEditingNominal(true)} className="text-slate-300 hover:text-primary transition-colors">
-                      <span className="material-symbols-outlined text-sm">edit</span>
-                    </button>
-                  )}
+                  <button onClick={() => setIsEditingNominal(true)} className="text-slate-300 hover:text-primary transition-colors">
+                    <span className="material-symbols-outlined text-sm">edit</span>
+                  </button>
                 </div>
               )}
             </div>

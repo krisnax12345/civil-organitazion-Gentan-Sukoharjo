@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { AppView, UserRole } from '../types';
+import { AppView } from '../types';
 
 interface SidebarProps {
   activeView: AppView;
@@ -11,7 +11,6 @@ interface SidebarProps {
   currentUser?: string;
   instansiName?: string;
   instansiLogo?: string;
-  userRole: UserRole;
   showBottomNav: boolean;
   setShowBottomNav: (show: boolean) => void;
 }
@@ -23,23 +22,20 @@ const Sidebar: React.FC<SidebarProps> = ({
   toggleDarkMode, 
   onLogout, 
   currentUser = 'Admin', 
-  userRole,
   instansiName = 'Jimpitan RT',
   instansiLogo = '',
   showBottomNav,
   setShowBottomNav
 }) => {
   const navItems = [
-    { id: AppView.DASHBOARD, label: 'Dasbor', icon: 'dashboard', roles: [UserRole.ADMIN, UserRole.BENDAHARA, UserRole.PENGURUS] },
-    { id: AppView.MANAJEMEN_WARGA, label: 'Input Warga', icon: 'person_add', roles: [UserRole.ADMIN, UserRole.PENGURUS] },
-    { id: AppView.IURAN_HARIAN, label: 'Iuran', icon: 'payments', roles: [UserRole.ADMIN, UserRole.BENDAHARA, UserRole.PENGURUS] },
-    { id: AppView.PENGELUARAN_KAS, label: 'Belanja', icon: 'shopping_cart', roles: [UserRole.ADMIN, UserRole.BENDAHARA] },
-    { id: AppView.LAPORAN_KEUANGAN, label: 'Laporan', icon: 'analytics', roles: [UserRole.ADMIN, UserRole.BENDAHARA] },
-    { id: AppView.MASTER_DATA, label: 'Master Data', icon: 'database', roles: [UserRole.ADMIN] },
-    { id: AppView.PENGATURAN, label: 'Pengaturan', icon: 'settings', roles: [UserRole.ADMIN] },
+    { id: AppView.DASHBOARD, label: 'Dasbor', icon: 'dashboard' },
+    { id: AppView.MANAJEMEN_WARGA, label: 'Input Warga', icon: 'person_add' },
+    { id: AppView.IURAN_HARIAN, label: 'Iuran', icon: 'payments' },
+    { id: AppView.PENGELUARAN_KAS, label: 'Belanja', icon: 'shopping_cart' },
+    { id: AppView.LAPORAN_KEUANGAN, label: 'Laporan', icon: 'analytics' },
+    { id: AppView.MASTER_DATA, label: 'Master Data', icon: 'database' },
+    { id: AppView.PENGATURAN, label: 'Pengaturan', icon: 'settings' },
   ];
-
-  const filteredNavItems = navItems.filter(item => item.roles.includes(userRole));
 
   return (
     <>
@@ -61,7 +57,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           </div>
 
           <nav className="flex flex-col gap-2 flex-1">
-            {filteredNavItems.map((item) => (
+            {navItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => setActiveView(item.id)}
@@ -121,7 +117,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       {/* Mobile Bottom Navigation */}
       {showBottomNav ? (
         <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-card-dark border-t border-slate-200 dark:border-slate-800 flex justify-around items-center px-2 py-3 z-[100] transition-all duration-300 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] overflow-x-auto custom-scrollbar animate-in slide-in-from-bottom duration-300">
-          {filteredNavItems.map((item) => (
+          {navItems.map((item) => (
             <button
               key={item.id}
               onClick={() => setActiveView(item.id)}
