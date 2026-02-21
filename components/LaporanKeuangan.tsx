@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { Transaksi } from '../types';
+import { Transaksi, Warga } from '../types';
 import { 
   startOfMonth, 
   endOfMonth, 
@@ -29,6 +29,9 @@ import {
 interface LaporanKeuanganProps {
   listTransaksi: Transaksi[];
   onAddTransaksi: (t: Omit<Transaksi, 'id' | 'timestamp'>) => void;
+  listWarga: Warga[];
+  iuranData: Record<string, Record<string, number>>;
+  nominalWajib: number;
   instansiName?: string;
   instansiAddress?: string;
   instansiLogo?: string;
@@ -39,6 +42,9 @@ type PeriodType = 'all' | 'this_month' | 'last_month' | 'this_year' | 'custom';
 const LaporanKeuangan: React.FC<LaporanKeuanganProps> = ({ 
   listTransaksi, 
   onAddTransaksi, 
+  listWarga,
+  iuranData,
+  nominalWajib,
   instansiName = 'Jimpitan RT', 
   instansiAddress = 'Lingkungan Aman Damai',
   instansiLogo = ''
@@ -102,6 +108,58 @@ const LaporanKeuangan: React.FC<LaporanKeuanganProps> = ({
   const totalMasuk = filteredTransaksi.filter(t => t.kategori === 'masuk').reduce((acc, t) => acc + t.jumlah, 0);
   const totalKeluar = filteredTransaksi.filter(t => t.kategori === 'keluar').reduce((acc, t) => acc + t.jumlah, 0);
   const saldoAkhir = totalMasuk - totalKeluar;
+
+  // Calculation for Arrears (Kekurangan Bayar) in selected period
+  const dataTunggakan = useMemo(() => {
+    const now = new Date();
+    let start: Date;
+    let end: Date;
+
+    switch (selectedPeriod) {
+      case 'this_month':
+        start = startOfMonth(now);
+        end = endOfMonth(now);
+        break;
+      case 'last_month':
+        const lastMonth = subMonths(now, 1);
+        start = startOfMonth(lastMonth);
+        end = endOfMonth(lastMonth);
+        break;
+      case 'this_year':
+        start = startOfYear(now);
+        end = endOfYear(now);
+        break;
+      case 'custom':
+        start = startOfDay(parseISO(customRange.start));
+        end = endOfDay(parseISO(customRange.end));
+        break;
+      default:
+        return { total: 0, list: [] };
+    }
+
+    // Calculate days in period
+    const diffTime = Math.abs(end.getTime() - start.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    const kewajibanPerWarga = diffDays * nominalWajib;
+
+    const list = listWarga.map(warga => {
+      let terbayar = 0;
+      const logWarga = iuranData[warga.id] || {};
+      
+      Object.entries(logWarga).forEach(([date, val]) => {
+        const d = parseISO(date);
+        if (isWithinInterval(d, { start, end })) {
+          terbayar += (val as number);
+        }
+      });
+
+      const sisa = kewajibanPerWarga - terbayar;
+      return { ...warga, terbayar, sisa: sisa > 0 ? sisa : 0 };
+    }).filter(w => w.sisa > 0);
+
+    const total = list.reduce((acc, w) => acc + w.sisa, 0);
+    return { total, list };
+  }, [listWarga, iuranData, nominalWajib, selectedPeriod, customRange]);
 
   // Menghitung saldo berjalan untuk setiap transaksi (berdasarkan data yang terfilter)
   const listDenganSaldo = useMemo(() => {
@@ -316,7 +374,7 @@ const LaporanKeuangan: React.FC<LaporanKeuanganProps> = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12 card-container">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12 card-container">
         <div className="bg-white dark:bg-card-dark rounded-[32px] p-8 border border-slate-200 dark:border-slate-800 shadow-sm transition-all hover:shadow-md border-b-4 border-b-primary">
           <div className="flex items-center gap-4 mb-3">
              <div className="size-10 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
@@ -346,6 +404,18 @@ const LaporanKeuangan: React.FC<LaporanKeuanganProps> = ({
              <p className="text-rose-600/60 dark:text-rose-400/60 text-[10px] font-black uppercase tracking-widest">Total Keluar</p>
           </div>
           <p className="text-3xl font-black text-rose-500 tracking-tight">Rp {totalKeluar.toLocaleString('id-ID')}</p>
+        </div>
+        <div className="bg-amber-50/50 dark:bg-amber-950/20 rounded-[32px] p-8 border border-amber-100 dark:border-amber-900/30 shadow-sm transition-all hover:shadow-md">
+          <div className="flex items-center gap-4 mb-3">
+             <div className="size-10 rounded-2xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center text-amber-500">
+               <span className="material-symbols-outlined">warning</span>
+             </div>
+             <p className="text-amber-600/60 dark:text-amber-400/60 text-[10px] font-black uppercase tracking-widest">Kekurangan Bayar</p>
+          </div>
+          <p className="text-3xl font-black text-amber-600 dark:text-amber-400 tracking-tight">Rp {dataTunggakan.total.toLocaleString('id-ID')}</p>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">
+            {dataTunggakan.list.length} Warga Belum Lunas
+          </p>
         </div>
       </div>
 

@@ -26,30 +26,11 @@ const getEnv = (name: string): string => {
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(() => localStorage.getItem('rt_auth') === 'true');
   const [currentUser, setCurrentUser] = useState(() => localStorage.getItem('rt_user_id') || '');
-  const [userRole, setUserRole] = useState<UserRole>(() => (localStorage.getItem('rt_user_role') as UserRole) || UserRole.PENGURUS);
   const [activeView, setActiveView] = useState<AppView>(AppView.DASHBOARD);
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('rt_theme') !== 'light');
   const [showBottomNav, setShowBottomNav] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [dbError, setDbError] = useState<string | null>(null);
-
-  // RBAC: Reset view if not allowed
-  useEffect(() => {
-    const navItems = [
-      { id: AppView.DASHBOARD, roles: [UserRole.ADMIN, UserRole.BENDAHARA, UserRole.PENGURUS] },
-      { id: AppView.MANAJEMEN_WARGA, roles: [UserRole.ADMIN, UserRole.PENGURUS] },
-      { id: AppView.IURAN_HARIAN, roles: [UserRole.ADMIN, UserRole.BENDAHARA, UserRole.PENGURUS] },
-      { id: AppView.PENGELUARAN_KAS, roles: [UserRole.ADMIN, UserRole.BENDAHARA] },
-      { id: AppView.LAPORAN_KEUANGAN, roles: [UserRole.ADMIN, UserRole.BENDAHARA] },
-      { id: AppView.MASTER_DATA, roles: [UserRole.ADMIN] },
-      { id: AppView.PENGATURAN, roles: [UserRole.ADMIN] },
-    ];
-    
-    const currentItem = navItems.find(item => item.id === activeView);
-    if (currentItem && !currentItem.roles.includes(userRole)) {
-      setActiveView(AppView.DASHBOARD);
-    }
-  }, [activeView, userRole]);
 
   // Cloud Config State
   const [cloudConfig, setCloudConfig] = useState(() => {
@@ -204,12 +185,8 @@ const App: React.FC = () => {
 
   const handleLogout = () => {
     if(confirm('Keluar dari sistem?')) {
-      localStorage.removeItem('rt_auth');
-      localStorage.removeItem('rt_user_id');
-      localStorage.removeItem('rt_user_role');
       setIsAuthenticated(false);
       setCurrentUser('');
-      setUserRole(UserRole.PENGURUS);
     }
   };
 
@@ -454,9 +431,9 @@ const App: React.FC = () => {
             case AppView.DASHBOARD: return <Dashboard listWarga={listWarga} listTransaksi={listTransaksi} iuranData={iuranHarian} nominalWajib={nominalWajib} currentUser={currentUser} instansiName={instansiName} />;
             case AppView.MASTER_DATA: return <MasterData listWarga={listWarga} onDelete={deleteWarga} onUpdate={updateWarga} />;
             case AppView.MANAJEMEN_WARGA: return <ManajemenWarga listWarga={listWarga} onAdd={addWarga} onDelete={deleteWarga} />;
-            case AppView.IURAN_HARIAN: return <IuranHarian listWarga={listWarga} listTransaksi={listTransaksi} iuranData={iuranHarian} onRecordMulti={recordIuranMulti} onRecordBulk={recordIuranBulk} onRecordCustom={recordIuranCustom} nominalWajib={nominalWajib} setNominalWajib={updateNominalGlobal} userRole={userRole} />;
+            case AppView.IURAN_HARIAN: return <IuranHarian listWarga={listWarga} listTransaksi={listTransaksi} iuranData={iuranHarian} onRecordMulti={recordIuranMulti} onRecordBulk={recordIuranBulk} onRecordCustom={recordIuranCustom} nominalWajib={nominalWajib} setNominalWajib={updateNominalGlobal} />;
             case AppView.PENGELUARAN_KAS: return <PengeluaranKas listTransaksi={listTransaksi} onAddPengeluaran={addTransaksi} />;
-            case AppView.LAPORAN_KEUANGAN: return <LaporanKeuangan listTransaksi={listTransaksi} onAddTransaksi={addTransaksi} instansiName={instansiName} instansiAddress={instansiAddress} instansiLogo={instansiLogo} />;
+            case AppView.LAPORAN_KEUANGAN: return <LaporanKeuangan listTransaksi={listTransaksi} onAddTransaksi={addTransaksi} listWarga={listWarga} iuranData={iuranHarian} nominalWajib={nominalWajib} instansiName={instansiName} instansiAddress={instansiAddress} instansiLogo={instansiLogo} />;
             case AppView.PENGATURAN: return (
               <Pengaturan 
                 instansiName={instansiName} 
@@ -483,19 +460,7 @@ const App: React.FC = () => {
     );
   };
 
-  if (!isAuthenticated) return (
-    <Login 
-      onLoginSuccess={(user) => { 
-        setCurrentUser(user.nama); 
-        setUserRole(user.role);
-        localStorage.setItem('rt_auth', 'true');
-        localStorage.setItem('rt_user_id', user.nama);
-        localStorage.setItem('rt_user_role', user.role);
-        setIsAuthenticated(true); 
-      }} 
-      listUsers={listUsers} 
-    />
-  );
+  if (!isAuthenticated) return <Login onLoginSuccess={(uid) => { setCurrentUser(uid); setIsAuthenticated(true); }} listUsers={listUsers} />;
 
   return (
     <div className="flex flex-col lg:flex-row h-screen overflow-hidden bg-background-light dark:bg-background-dark text-slate-600 dark:text-slate-100">
@@ -506,7 +471,6 @@ const App: React.FC = () => {
         toggleDarkMode={() => setIsDarkMode(!isDarkMode)} 
         onLogout={handleLogout} 
         currentUser={currentUser} 
-        userRole={userRole}
         instansiName={instansiName} 
         instansiLogo={instansiLogo} 
         showBottomNav={showBottomNav}
