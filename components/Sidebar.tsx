@@ -11,6 +11,8 @@ interface SidebarProps {
   currentUser?: string;
   instansiName?: string;
   instansiLogo?: string;
+  showBottomNav: boolean;
+  setShowBottomNav: (show: boolean) => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ 
@@ -21,7 +23,9 @@ const Sidebar: React.FC<SidebarProps> = ({
   onLogout, 
   currentUser = 'Admin', 
   instansiName = 'Jimpitan RT',
-  instansiLogo = ''
+  instansiLogo = '',
+  showBottomNav,
+  setShowBottomNav
 }) => {
   const navItems = [
     { id: AppView.DASHBOARD, label: 'Dasbor', icon: 'dashboard' },
@@ -111,32 +115,41 @@ const Sidebar: React.FC<SidebarProps> = ({
       </aside>
 
       {/* Mobile Bottom Navigation */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-card-dark border-t border-slate-200 dark:border-slate-800 flex justify-around items-center px-2 py-3 z-[100] transition-colors duration-300 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] overflow-x-auto custom-scrollbar">
-        {navItems.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => setActiveView(item.id)}
-            className={`flex flex-col items-center gap-1 min-w-[64px] flex-1 py-1 transition-all ${
-              activeView === item.id ? 'text-primary' : 'text-slate-400 dark:text-slate-500'
-            }`}
+      {showBottomNav ? (
+        <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-card-dark border-t border-slate-200 dark:border-slate-800 flex justify-around items-center px-2 py-3 z-[100] transition-all duration-300 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] overflow-x-auto custom-scrollbar animate-in slide-in-from-bottom duration-300">
+          {navItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setActiveView(item.id)}
+              className={`flex flex-col items-center gap-1 min-w-[64px] flex-1 py-1 transition-all ${
+                activeView === item.id ? 'text-primary' : 'text-slate-400 dark:text-slate-500'
+              }`}
+            >
+              <span className={`material-symbols-outlined text-2xl ${activeView === item.id ? 'fill-1' : ''}`}>
+                {item.icon}
+              </span>
+              <p className="text-[10px] font-black uppercase tracking-tighter leading-none">{item.label.split(' ')[0]}</p>
+              {activeView === item.id && (
+                <div className="w-1 h-1 bg-primary rounded-full mt-1"></div>
+              )}
+            </button>
+          ))}
+          <button 
+            onClick={() => setShowBottomNav(false)}
+            className="flex flex-col items-center gap-1 min-w-[64px] flex-1 py-1 text-slate-400 dark:text-slate-500"
           >
-            <span className={`material-symbols-outlined text-2xl ${activeView === item.id ? 'fill-1' : ''}`}>
-              {item.icon}
-            </span>
-            <p className="text-[10px] font-black uppercase tracking-tighter leading-none">{item.label.split(' ')[0]}</p>
-            {activeView === item.id && (
-              <div className="w-1 h-1 bg-primary rounded-full mt-1"></div>
-            )}
+            <span className="material-symbols-outlined text-2xl">keyboard_double_arrow_down</span>
+            <p className="text-[10px] font-black uppercase tracking-tighter leading-none">Hide</p>
           </button>
-        ))}
+        </nav>
+      ) : (
         <button 
-          onClick={onLogout}
-          className="flex flex-col items-center gap-1 min-w-[64px] flex-1 py-1 text-rose-400 dark:text-rose-500"
+          onClick={() => setShowBottomNav(true)}
+          className="lg:hidden fixed bottom-4 right-4 z-[100] size-12 bg-primary text-white rounded-full shadow-xl shadow-primary/30 flex items-center justify-center animate-in zoom-in duration-300"
         >
-          <span className="material-symbols-outlined text-2xl">logout</span>
-          <p className="text-[10px] font-black uppercase tracking-tighter leading-none">Keluar</p>
+          <span className="material-symbols-outlined">menu</span>
         </button>
-      </nav>
+      )}
     </>
   );
 };

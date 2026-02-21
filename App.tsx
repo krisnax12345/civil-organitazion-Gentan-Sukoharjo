@@ -28,6 +28,7 @@ const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState(() => localStorage.getItem('rt_user_id') || '');
   const [activeView, setActiveView] = useState<AppView>(AppView.DASHBOARD);
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('rt_theme') !== 'light');
+  const [showBottomNav, setShowBottomNav] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [dbError, setDbError] = useState<string | null>(null);
 
@@ -463,8 +464,19 @@ const App: React.FC = () => {
 
   return (
     <div className="flex flex-col lg:flex-row h-screen overflow-hidden bg-background-light dark:bg-background-dark text-slate-600 dark:text-slate-100">
-      <Sidebar activeView={activeView} setActiveView={setActiveView} isDarkMode={isDarkMode} toggleDarkMode={() => setIsDarkMode(!isDarkMode)} onLogout={handleLogout} currentUser={currentUser} instansiName={instansiName} instansiLogo={instansiLogo} />
-      <main className="flex-1 overflow-y-auto custom-scrollbar pb-24 lg:pb-0">
+      <Sidebar 
+        activeView={activeView} 
+        setActiveView={setActiveView} 
+        isDarkMode={isDarkMode} 
+        toggleDarkMode={() => setIsDarkMode(!isDarkMode)} 
+        onLogout={handleLogout} 
+        currentUser={currentUser} 
+        instansiName={instansiName} 
+        instansiLogo={instansiLogo} 
+        showBottomNav={showBottomNav}
+        setShowBottomNav={setShowBottomNav}
+      />
+      <main className={`flex-1 overflow-y-auto custom-scrollbar lg:pb-0 ${showBottomNav ? 'pb-24' : 'pb-0'}`}>
         <div className="fixed top-5 right-5 z-50 pointer-events-none no-print">
             {supabase ? (
                <div className="bg-emerald-500 text-white px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg animate-in fade-in zoom-in">
